@@ -1,0 +1,11 @@
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:topLeftRadius="40dp"
+        android:topRightRadius="40dp"
+        android:bottomLeftRadius="40dp"
+        android:bottomRightRadius="40dp"/> <!-- Setting one corner to 0dp will make it square -->
+    <solid android:color="#FFFFFF"/>
+
+    <stroke
+        android:width="2dp"
+        android:color="#D7D7D7"/>
+</shape>
