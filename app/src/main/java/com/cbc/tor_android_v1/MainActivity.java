@@ -19,7 +19,9 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.cbc.tor_android_v1.manager.EncryptionManager;
+import com.cbc.tor_android_v1.server.TorMessageServer;
 import com.cbc.tor_android_v1.ui.chat.ChatViewActivity;
+import com.cbc.tor_android_v1.ui.chat.ChatViewAdapter;
 
 import org.libsodium.jni.NaCl;
 import org.torproject.android.binary.TorResourceInstaller;
@@ -41,6 +43,9 @@ public class MainActivity extends AppCompatActivity {
 
      private String publicKey;
      private String privateKey;
+     private EncryptionManager publicKeyManager;
+
+     private TorMessageServer torMessageServer;
     private static final String TAG = "TorDebug";
 
     @Override
@@ -52,6 +57,9 @@ public class MainActivity extends AppCompatActivity {
         NaCl.sodium();
         initUiProps();
         initClickListeners();
+        publicKeyManager = new EncryptionManager(this);
+        torMessageServer = new TorMessageServer(this);
+
     }
 
     private void initUiProps() {
@@ -66,8 +74,8 @@ public class MainActivity extends AppCompatActivity {
     private void initClickListeners() {
         generateButton.setOnClickListener(v -> {
 
-            EncryptionManager publicKeyManager = new EncryptionManager(this);
-            publicKeyManager.decryptMessage("e9d2c331af34b8dfd64d43f5f79dc45fa36b01e92bcdb87fd14a1340e0dff96eeaec199948e15d46aedc87d50c2f2285c2b8f1334756b78bdde290e98a4d97d141f4ccbf327cb68b7638");
+
+          //  publicKeyManager.decryptMessage("e9d2c331af34b8dfd64d43f5f79dc45fa36b01e92bcdb87fd14a1340e0dff96eeaec199948e15d46aedc87d50c2f2285c2b8f1334756b78bdde290e98a4d97d141f4ccbf327cb68b7638");
             publicKeyManager.loadOrGenerateKeys();
             publicKey = publicKeyManager.getStoredPublicKeyHex();
             privateKey = publicKeyManager.getPrivateKeyPref();
@@ -86,8 +94,9 @@ public class MainActivity extends AppCompatActivity {
         });
 
         chatEnableButton.setOnClickListener(v -> {
-            String publicKey = onionPublicKey.getText().toString().trim();
+            String publicKey = publicKeyManager.getStoredPublicKeyHex();
           //  String privateKey = extractPrivateKey(new File(torDir, "hidden_service"));
+
 
             if (!publicKey.isEmpty()) {
                 Intent intent = new Intent(MainActivity.this, ChatViewActivity.class);
@@ -106,6 +115,11 @@ public class MainActivity extends AppCompatActivity {
             String publicKey = onionPublicKey.getText().toString().trim();
 
             if (!onion.isEmpty() && !publicKey.isEmpty()) {
+                try {
+                    torMessageServer.start();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
                 String combinedText = "Onion key: " + onion + "\n\nPublic key: " + publicKey;
 
                 ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
@@ -212,40 +226,40 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private String extractPublicKey(File hsDir) {
-        File pubKeyFile = new File(hsDir, "hs_ed25519_public_key");
-        if (!pubKeyFile.exists()) return null;
+//    private String extractPublicKey(File hsDir) {
+//        File pubKeyFile = new File(hsDir, "hs_ed25519_public_key");
+//        if (!pubKeyFile.exists()) return null;
+//
+//        try {
+//            byte[] keyBytes;
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//                keyBytes = java.nio.file.Files.readAllBytes(pubKeyFile.toPath());
+//            } else {
+//                FileInputStream fis = new FileInputStream(pubKeyFile);
+//                keyBytes = new byte[(int) pubKeyFile.length()];
+//                fis.read(keyBytes);
+//                fis.close();
+//            }
+//            return Base64.encodeToString(keyBytes, Base64.NO_WRAP);
+//        } catch (IOException e) {
+//            Log.e(TAG, "Error reading public key", e);
+//            return null;
+//        }
+//    }
 
-        try {
-            byte[] keyBytes;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                keyBytes = java.nio.file.Files.readAllBytes(pubKeyFile.toPath());
-            } else {
-                FileInputStream fis = new FileInputStream(pubKeyFile);
-                keyBytes = new byte[(int) pubKeyFile.length()];
-                fis.read(keyBytes);
-                fis.close();
-            }
-            return Base64.encodeToString(keyBytes, Base64.NO_WRAP);
-        } catch (IOException e) {
-            Log.e(TAG, "Error reading public key", e);
-            return null;
-        }
-    }
-
-    private String extractPrivateKey(File hsDir) {
-        File privKeyFile = new File(hsDir, "hs_ed25519_secret_key");
-        if (!privKeyFile.exists()) return null;
-
-        try {
-            byte[] keyBytes = new byte[(int) privKeyFile.length()];
-            FileInputStream fis = new FileInputStream(privKeyFile);
-            fis.read(keyBytes);
-            fis.close();
-            return Base64.encodeToString(keyBytes, Base64.NO_WRAP);
-        } catch (IOException e) {
-            Log.e(TAG, "Error reading private key", e);
-            return null;
-        }
-    }
+//    private String extractPrivateKey(File hsDir) {
+//        File privKeyFile = new File(hsDir, "hs_ed25519_secret_key");
+//        if (!privKeyFile.exists()) return null;
+//
+//        try {
+//            byte[] keyBytes = new byte[(int) privKeyFile.length()];
+//            FileInputStream fis = new FileInputStream(privKeyFile);
+//            fis.read(keyBytes);
+//            fis.close();
+//            return Base64.encodeToString(keyBytes, Base64.NO_WRAP);
+//        } catch (IOException e) {
+//            Log.e(TAG, "Error reading private key", e);
+//            return null;
+//        }
+//    }
 }

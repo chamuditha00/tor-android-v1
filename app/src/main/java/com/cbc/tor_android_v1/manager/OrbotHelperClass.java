@@ -150,50 +150,6 @@ public class OrbotHelperClass {
 
 
 
-//    public void createHiddenService() {
-//        new Thread(() -> {
-//            try {
-//                // Connect to the correct control port
-//                Socket socket = new Socket(TOR_PROXY_HOST, TOR_PROXY_PORT_9150);
-//
-//                TorControlConnection conn = new TorControlConnection(socket);
-//                conn.launchThread(true);
-//
-//
-//                conn.authenticate("abc1234".getBytes());
-//
-//                PrintWriter writer = new PrintWriter(
-//                        new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true
-//                );
-//                writer.print("ADD_ONION NEW:ED25519-V3 Port=80,127.0.0.1:8080\r\n");
-//                writer.flush();
-//
-//                BufferedReader reader = new BufferedReader(
-//                        new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8)
-//                );
-//
-//                String line;
-//                while ((line = reader.readLine()) != null) {
-//                    Log.d("TorControl", "Reply: " + line);
-//                    if (line.startsWith("250-ServiceID=")) {
-//                        String onion = line.substring("250-ServiceID=".length()) + ".onion";
-//                        Log.i("TorControl", "Generated Onion Address: " + onion);
-//                        break;
-//                    }
-//                    if (line.equals("250 OK")) {
-//                        break;
-//                    }
-//                }
-//
-//                socket.close();
-//
-//            } catch (Exception e) {
-//                Log.e("TorControl", "Error creating hidden service", e);
-//            }
-//        }).start();
-//    }
-
-
 
 
     public void checkOrbotStatus(Consumer<Boolean> callback) {
@@ -329,13 +285,6 @@ public class OrbotHelperClass {
                 .readTimeout(60, TimeUnit.SECONDS)
                 .build();
     }
-//    private OkHttpClient getTorHttpClient() {
-//        Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress(TOR_PROXY_HOST, TOR_PROXY_PORT_9050));
-//
-//        return new OkHttpClient.Builder()
-//                .proxy(proxy)  // Use Orbot's SOCKS5 proxy
-//                .build();
-//    }
 
     /**
      * Makes an HTTP GET request to a .onion URL using Tor.

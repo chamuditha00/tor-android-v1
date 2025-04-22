@@ -33,9 +33,11 @@ public class EncryptionManager {
 
     public void loadOrGenerateKeys() {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        String privateKeyHex = prefs.getString(PRIVATE_KEY_PREF, "cbcd46b9c762adc91474931a14f4a0138afdc0bedda3bb67ca63f4fa60f0650b");
-        String publicKeyHex = prefs.getString(PUBLIC_KEY_PREF, "11ca532c313aaaaf82306d60bcffad22597a1f2d082aa75391fb20f2b49e202c");
+//        String privateKeyHex = prefs.getString(PRIVATE_KEY_PREF, "cbcd46b9c762adc91474931a14f4a0138afdc0bedda3bb67ca63f4fa60f0650b");
+//        String publicKeyHex = prefs.getString(PUBLIC_KEY_PREF, "11ca532c313aaaaf82306d60bcffad22597a1f2d082aa75391fb20f2b49e202c");
 
+        String privateKeyHex = prefs.getString(PRIVATE_KEY_PREF , null);
+        String publicKeyHex = prefs.getString(PUBLIC_KEY_PREF , null);
         // Make sure Sodium is initialized
         NaCl.sodium();
 
@@ -155,7 +157,7 @@ public class EncryptionManager {
     }
 
 
-    public String decryptMessage(String encryptedHex) {
+    public String decryptMessage(String encryptedHex, String senderPublicKey) {
         try {
             Log.d(TAG, "Decrypting message...");
 
@@ -177,8 +179,8 @@ public class EncryptionManager {
             byte[] encryptedMessage = Arrays.copyOfRange(encryptedWithNonce, 24, encryptedWithNonce.length);
 
             // Construct sender's public key and Box
-            PublicKey senderPublicKey = new PublicKey(senderPublicKeyBytes);
-            Box box = new Box(senderPublicKey.toBytes(), privateKey.toBytes());
+            PublicKey constructsenderPublicKey = new PublicKey(senderPublicKeyBytes);
+            Box box = new Box(constructsenderPublicKey.toBytes(), privateKey.toBytes());
 
             // Decrypt
             byte[] decrypted = box.decrypt(nonce, encryptedMessage);
