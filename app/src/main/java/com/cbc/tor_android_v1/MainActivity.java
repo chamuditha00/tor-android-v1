@@ -58,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
         initUiProps();
         initClickListeners();
         publicKeyManager = new EncryptionManager(this);
-        torMessageServer = new TorMessageServer(this);
+        torMessageServer = new TorMessageServer(this ,publicKeyManager);
 
     }
 
@@ -80,6 +80,7 @@ public class MainActivity extends AppCompatActivity {
             publicKey = publicKeyManager.getStoredPublicKeyHex();
             privateKey = publicKeyManager.getPrivateKeyPref();
 
+
             Log.d(" generated key " , "Public Key: " + publicKey);
             Log.d(" generated key " , "Private key" + privateKey);
             onionTextView.setText("Starting Tor and generating .onion URL...");
@@ -100,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
 
             if (!publicKey.isEmpty()) {
                 Intent intent = new Intent(MainActivity.this, ChatViewActivity.class);
-                intent.putExtra("publicKey", publicKey);
+              //  intent.putExtra("publicKey", publicKey);
               //  intent.putExtra("privateKey", privateKey);
                 startActivity(intent);
             } else {
@@ -115,11 +116,6 @@ public class MainActivity extends AppCompatActivity {
             String publicKey = onionPublicKey.getText().toString().trim();
 
             if (!onion.isEmpty() && !publicKey.isEmpty()) {
-                try {
-                    torMessageServer.start();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
                 String combinedText = "Onion key: " + onion + "\n\nPublic key: " + publicKey;
 
                 ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
@@ -223,8 +219,17 @@ public class MainActivity extends AppCompatActivity {
         runOnUiThread(() -> {
             onionTextView.setText(onionUrl);
             onionPublicKey.setText(publicKey);
+            Log.d(TAG, "Onion URL: " + onionUrl);
+            Log.d(TAG, "Public Key: " + publicKey);
         });
-    }
+          if (!onionUrl.isEmpty() && !publicKey.isEmpty()) {
+              try {
+                  torMessageServer.start();
+                  Log.d("started server", "Tor message server started");
+              } catch (IOException e) {
+                  throw new RuntimeException(e);
+              }
+          }
 
 //    private String extractPublicKey(File hsDir) {
 //        File pubKeyFile = new File(hsDir, "hs_ed25519_public_key");
@@ -262,4 +267,5 @@ public class MainActivity extends AppCompatActivity {
 //            return null;
 //        }
 //    }
+}
 }

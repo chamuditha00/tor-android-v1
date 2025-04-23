@@ -40,7 +40,6 @@ import okhttp3.Response;
 public class OrbotHelperClass {
 
     private static final String ORBOT_PACKAGE_NAME = "org.torproject.android";
-    // info.guardianproject.orbot
     private static final String TAG = "OrbotHelperClass";
     private static final String TOR_PROXY_HOST = "127.0.0.1";  // Orbot's local proxy
     private static final int TOR_PROXY_PORT_9050 = 9050;

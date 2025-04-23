@@ -35,10 +35,10 @@ public class ChatViewActivity extends AppCompatActivity {
     private EncryptionManager encryptionManager;
 
     private static final String TAG = "ChatViewActivity";
-    private static final String ONION_ADDRESS = "http://jpcs2dtpyovatwzl7bmukhltd3qr7254cufuc6vvqhrgqgr6zegakmqd.onion:5000/receive";
+    private static final String ONION_ADDRESS = "http://4vf5q7np5dzsm4xcpr72cgtjzklbtpjyaqwvwfgzqjl5nwcbbsbnopqd.onion:5000/receive";
 
-    // ✅ Already a valid Curve25519 (X25519) public key
-    private static final String PUBLIC_KEY_HEX = "ac029cae1e9511d84fcd27b62abd89a31fc8962b5660e430ac359c510855e81b";
+
+    private static final String PUBLIC_KEY_HEX = "d969c998c92834a05ed479e94c5fb915ca8ef1563ce99f52d1fee34729ac4232";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

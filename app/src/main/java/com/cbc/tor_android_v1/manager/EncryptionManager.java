@@ -27,13 +27,13 @@ public class EncryptionManager {
 
     public EncryptionManager(Context context) {
         this.context = context;
-         loadOrGenerateKeys();
+
 
     }
 
     public void loadOrGenerateKeys() {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-//        String privateKeyHex = prefs.getString(PRIVATE_KEY_PREF, "cbcd46b9c762adc91474931a14f4a0138afdc0bedda3bb67ca63f4fa60f0650b");
+//       String privateKeyHex = prefs.getString(PRIVATE_KEY_PREF, "cbcd46b9c762adc91474931a14f4a0138afdc0bedda3bb67ca63f4fa60f0650b");
 //        String publicKeyHex = prefs.getString(PUBLIC_KEY_PREF, "11ca532c313aaaaf82306d60bcffad22597a1f2d082aa75391fb20f2b49e202c");
 
         String privateKeyHex = prefs.getString(PRIVATE_KEY_PREF , null);
@@ -157,12 +157,12 @@ public class EncryptionManager {
     }
 
 
-    public String decryptMessage(String encryptedHex, String senderPublicKey) {
+    public String decryptMessage(String encryptedHex, String senderPublicKeyHex) {
         try {
             Log.d(TAG, "Decrypting message...");
 
 
-            String senderPublicKeyHex = "ac029cae1e9511d84fcd27b62abd89a31fc8962b5660e430ac359c510855e81b"; //
+           // String senderPublicKeyHex = "ac029cae1e9511d84fcd27b62abd89a31fc8962b5660e430ac359c510855e81b"; //
 
             if (senderPublicKeyHex == null || !senderPublicKeyHex.matches("^[0-9a-fA-F]{64}$")) {
                 throw new IllegalArgumentException("Invalid or missing sender public key");
@@ -187,7 +187,7 @@ public class EncryptionManager {
 
 
             String message = new String(decrypted, StandardCharsets.UTF_8);
-            Log.d(TAG, "Message decrypted successfully" + message );
+            Log.d("TorMessageServer ", "Message decrypted successfully" + message );
             return new String(decrypted, StandardCharsets.UTF_8);
 
         } catch (Exception e) {
