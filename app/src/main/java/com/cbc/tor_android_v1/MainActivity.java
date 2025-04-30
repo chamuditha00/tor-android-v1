@@ -8,9 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
-import android.util.Base64;
 import android.util.Log;
-import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.TextView;
@@ -21,7 +19,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.cbc.tor_android_v1.manager.EncryptionManager;
 import com.cbc.tor_android_v1.server.TorMessageServer;
 import com.cbc.tor_android_v1.ui.chat.ChatViewActivity;
-import com.cbc.tor_android_v1.ui.chat.ChatViewAdapter;
 
 import org.libsodium.jni.NaCl;
 import org.torproject.android.binary.TorResourceInstaller;
@@ -29,7 +26,6 @@ import org.torproject.android.binary.Utils;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
@@ -46,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
      private EncryptionManager publicKeyManager;
 
      private TorMessageServer torMessageServer;
+     private ChatViewActivity chatViewActivity;
     private static final String TAG = "TorDebug";
 
     @Override
@@ -60,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
         publicKeyManager = new EncryptionManager(this);
         torMessageServer = new TorMessageServer(this ,publicKeyManager);
 
+         chatViewActivity = new ChatViewActivity();
     }
 
     private void initUiProps() {
@@ -75,15 +73,18 @@ public class MainActivity extends AppCompatActivity {
         generateButton.setOnClickListener(v -> {
 
 
-          //  publicKeyManager.decryptMessage("e9d2c331af34b8dfd64d43f5f79dc45fa36b01e92bcdb87fd14a1340e0dff96eeaec199948e15d46aedc87d50c2f2285c2b8f1334756b78bdde290e98a4d97d141f4ccbf327cb68b7638");
             publicKeyManager.loadOrGenerateKeys();
             publicKey = publicKeyManager.getStoredPublicKeyHex();
             privateKey = publicKeyManager.getPrivateKeyPref();
 
 
+
+
             Log.d(" generated key " , "Public Key: " + publicKey);
             Log.d(" generated key " , "Private key" + privateKey);
             onionTextView.setText("Starting Tor and generating .onion URL...");
+       //   publicKeyManager.decryptMessage("d1ad535598aa7257fd51839e84efe12143094648e3d090ecdb71cd2f1d43099fc3ef5601bc1e78ba913fd00b7e9d388ac5efaac11bb33c421ba06fd970b5bd5bcbd12883e6648f136f","d969c998c92834a05ed479e94c5fb915ca8ef1563ce99f52d1fee34729ac4232");
+
             new Thread(() -> {
                 try {
                     startTorAndGenerateOnion();
@@ -268,4 +269,6 @@ public class MainActivity extends AppCompatActivity {
 //        }
 //    }
 }
+
+
 }

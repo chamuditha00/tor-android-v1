@@ -2,132 +2,137 @@ package com.cbc.tor_android_v1.ui.chat;
 
 import android.content.Context;
 import android.os.Build;
-import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.cbc.tor_android_v1.R;
 
+import java.text.SimpleDateFormat;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.Locale;
 
 public class ChatViewAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
-    private ArrayList<String> localDataSet;
-    private ChatViewActivity activity;
-    private Context context;
+    private static final int VIEW_TYPE_SENT = 1;
+    private static final int VIEW_TYPE_RECEIVED = 2;
 
-    private static final int VIEW_TYPE_ONE = 0;
-    private static final int VIEW_TYPE_TWO = 1;
+    private final ArrayList<ChatMessage> chatMessages;
 
-
-    public ChatViewAdapter(ArrayList<String> dataSet,ChatViewActivity activity) {
-        localDataSet = dataSet;
-        this.activity = activity;
-    }
-
-
-    @NonNull
-    @Override
-    public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup viewGroup, int viewType) {
-        LayoutInflater inflater = LayoutInflater.from(viewGroup.getContext());
-        if (viewType == VIEW_TYPE_ONE) {
-            View view = inflater.inflate(R.layout.list_item_chat_request_view, viewGroup, false);
-            return new ChatRequestViewHolder(view);
-        } else {
-            View view = inflater.inflate(R.layout.list_item_chatbot_reply_view, viewGroup, false);
-            return new ChatResponseViewHolder(view);
-        }
-    }
-
-    @Override
-    public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
-        String currentDataOBJ = localDataSet.get(position);
-        if (holder.getItemViewType() == VIEW_TYPE_ONE) {
-            ChatRequestViewHolder requestHolder = (ChatRequestViewHolder) holder;
-            String[] splitData = currentDataOBJ.split("##DELIMITER##");
-            requestHolder.textView.setText(splitData[0]);
-            requestHolder.timeView.setText(getCurrentTime());
-           // configureDocsView(requestHolder.docsView, splitData.length > 1 ? splitData[1] : "");
-        } else {
-            ChatResponseViewHolder responseHolder = (ChatResponseViewHolder) holder;
-            responseHolder.textView.setText(currentDataOBJ);
-            responseHolder.timeView.setText(getCurrentTime());
-        }
-    }
-
-    public String getCurrentTime() {
-        DateTimeFormatter formatter = null;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            formatter = DateTimeFormatter.ofPattern("hh.mma");
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            return LocalTime.now().format(formatter);
-        }
-        return "";
-    }
-
-    @Override
-    public int getItemCount() {
-        return localDataSet.size();
+    public ChatViewAdapter(ArrayList<ChatMessage> chatMessages, Context context) {
+        this.chatMessages = chatMessages;
     }
 
     @Override
     public int getItemViewType(int position) {
-        return position % 2 == 0 ? VIEW_TYPE_ONE : VIEW_TYPE_TWO;
+        return chatMessages.get(position).isUser ? VIEW_TYPE_SENT : VIEW_TYPE_RECEIVED;
     }
 
-    public void setContext(Context context) {
-        this.context = context;
+    @NonNull
+    @Override
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        LayoutInflater inflater = LayoutInflater.from(parent.getContext());
+
+        if (viewType == VIEW_TYPE_SENT) {
+            View view = inflater.inflate(R.layout.list_item_chat_request_view, parent, false);
+            return new SentMessageHolder(view);
+        } else {
+            View view = inflater.inflate(R.layout.list_item_chatbot_reply_view, parent, false);
+            return new ReceivedMessageHolder(view);
+        }
     }
 
+    @Override
+        public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+            ChatMessage message = chatMessages.get(position);
+            String time = getCurrentTime();
 
-    public void addItem(String item) {
-        localDataSet.add(item);
-        notifyItemInserted(localDataSet.size() - 1);
+            if (holder instanceof SentMessageHolder) {
+                ((SentMessageHolder) holder).textView.setText(message.message);
+                ((SentMessageHolder) holder).timeView.setText(time);
+            } else {
+                ((ReceivedMessageHolder) holder).textView.setText(message.message);
+                ((ReceivedMessageHolder) holder).timeView.setText(time);
+            }
     }
 
-
-    public void removeItemFromList() {
-        localDataSet.remove(localDataSet.size() - 1);
-        notifyDataSetChanged();
+    @Override
+    public int getItemCount() {
+        return chatMessages.size();
     }
 
-    static class ChatRequestViewHolder extends RecyclerView.ViewHolder {
-        final TextView textView;
-        final TextView timeView;
-        final LinearLayout docsView;
+    public void addItem(String message, boolean isUser) {
+        chatMessages.add(new ChatMessage(message, isUser));
+        notifyItemInserted(chatMessages.size() - 1);
+    }
 
-        ChatRequestViewHolder(View view) {
+    public void removeLastItemIfExists() {
+        if (!chatMessages.isEmpty()) {
+            chatMessages.remove(chatMessages.size() - 1);
+            notifyItemRemoved(chatMessages.size());
+        }
+    }
+
+    private String getCurrentTime() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            return LocalTime.now().format(DateTimeFormatter.ofPattern("hh:mm a"));
+        } else {
+            return new SimpleDateFormat("hh:mm a", Locale.getDefault()).format(new Date());
+        }
+    }
+
+    static class SentMessageHolder extends RecyclerView.ViewHolder {
+        TextView textView, timeView;
+
+
+        SentMessageHolder(View view) {
             super(view);
             textView = view.findViewById(R.id.chat_text_view);
-            docsView = view.findViewById(R.id.chat_text_view_docs);
             timeView = view.findViewById(R.id.chat_text_time_view);
         }
     }
 
+    static class ReceivedMessageHolder extends RecyclerView.ViewHolder {
+        TextView textView, timeView;
 
-    static class ChatResponseViewHolder extends RecyclerView.ViewHolder {
-        final TextView textView;
-        final TextView timeView;
-
-        ChatResponseViewHolder(View view) {
+        ReceivedMessageHolder(View view) {
             super(view);
             textView = view.findViewById(R.id.chat_reply_text_view);
             timeView = view.findViewById(R.id.chat_reply_time_view);
         }
     }
-
 }
+
+
+//    static class ChatRequestViewHolder extends RecyclerView.ViewHolder {
+//        final TextView textView;
+//        final TextView timeView;
+//        final LinearLayout docsView;
+//
+//        ChatRequestViewHolder(View view) {
+//            super(view);
+//            textView = view.findViewById(R.id.chat_text_view);
+//            docsView = view.findViewById(R.id.chat_text_view_docs);
+//            timeView = view.findViewById(R.id.chat_text_time_view);
+//        }
+//    }
+//
+//
+//    static class ChatResponseViewHolder extends RecyclerView.ViewHolder {
+//        final TextView textView;
+//        final TextView timeView;
+//
+//        ChatResponseViewHolder(View view) {
+//            super(view);
+//            textView = view.findViewById(R.id.chat_reply_text_view);
+//            timeView = view.findViewById(R.id.chat_reply_time_view);
+//        }
+//    }
+

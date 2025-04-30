@@ -38,16 +38,16 @@ public class EncryptionManager {
 
         String privateKeyHex = prefs.getString(PRIVATE_KEY_PREF , null);
         String publicKeyHex = prefs.getString(PUBLIC_KEY_PREF , null);
-        // Make sure Sodium is initialized
+
         NaCl.sodium();
 
         if (privateKeyHex != null && publicKeyHex != null) {
             try {
                 privateKey = new PrivateKey(privateKeyHex);
                 publicKey = new PublicKey(publicKeyHex);
-                Log.d(TAG, "Loaded existing keys successfully"+ publicKey.toString());
-                Log.d(TAG, "Loaded existing keys successfully" + privateKey.toString());
-                Log.d(TAG, "Loaded existing keys successfully");
+                Log.d(TAG, "Loaded existing keys successfully "+ publicKey.toString());
+                Log.d(TAG, "Loaded existing keys successfully " + privateKey.toString());
+                Log.d(TAG, "Loaded existing keys successfully ");
             } catch (Exception e) {
                 Log.e(TAG, "Error loading saved keys, generating new ones", e);
                 generateNewKeys(prefs);
@@ -71,6 +71,7 @@ public class EncryptionManager {
     private void generateNewKeys(SharedPreferences prefs) {
         KeyPair keyPair = new KeyPair();
         privateKey = keyPair.getPrivateKey();
+        Log.d(TAG, "Private key: " + privateKey.toString());
         publicKey = keyPair.getPublicKey();
 
         // Save the keys
@@ -88,13 +89,7 @@ public class EncryptionManager {
         return publicKey.toString();
     }
 
-    /**
-     * Encrypt a message using recipient's X25519 public key
-     *
-     * @param message Plain text message
-     * @param receiverPublicKeyHex Recipient's X25519 public key in hex format
-     * @return Base64 encoded encrypted message with nonce
-     */
+
     public String encryptMessage(String message, String receiverPublicKeyHex) {
         try {
             Log.d(TAG, "Encrypting message with recipient X25519 public key: " + receiverPublicKeyHex);
@@ -111,6 +106,8 @@ public class EncryptionManager {
             PublicKey receiverPublicKey = new PublicKey(receiverPublicKeyBytes);
 
             // Create Box for encryption
+            Log.d(TAG, "Creating Box for encryption" + getPrivateKeyPref());
+            privateKey = new PrivateKey(getPrivateKeyPref());
             Box box = new Box(receiverPublicKey.toBytes(), privateKey.toBytes());
 
             // Generate 24-byte nonce
@@ -162,7 +159,7 @@ public class EncryptionManager {
             Log.d(TAG, "Decrypting message...");
 
 
-           // String senderPublicKeyHex = "ac029cae1e9511d84fcd27b62abd89a31fc8962b5660e430ac359c510855e81b"; //
+      //      String senderPublicKeyHex = "d969c998c92834a05ed479e94c5fb915ca8ef1563ce99f52d1fee34729ac4232";
 
             if (senderPublicKeyHex == null || !senderPublicKeyHex.matches("^[0-9a-fA-F]{64}$")) {
                 throw new IllegalArgumentException("Invalid or missing sender public key");
@@ -177,6 +174,7 @@ public class EncryptionManager {
 
             // Extract ciphertext
             byte[] encryptedMessage = Arrays.copyOfRange(encryptedWithNonce, 24, encryptedWithNonce.length);
+
 
             // Construct sender's public key and Box
             PublicKey constructsenderPublicKey = new PublicKey(senderPublicKeyBytes);

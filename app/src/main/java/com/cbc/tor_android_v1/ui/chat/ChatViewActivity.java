@@ -5,39 +5,37 @@ import android.os.Handler;
 import android.util.Log;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.cbc.tor_android_v1.R;
 import com.cbc.tor_android_v1.manager.EncryptionManager;
 import com.cbc.tor_android_v1.manager.OrbotHelperClass;
-
+import com.cbc.tor_android_v1.server.OnMessageReceivedListener;
+import com.cbc.tor_android_v1.server.TorMessageServer;
 import org.json.JSONException;
 import org.json.JSONObject;
-
 import java.util.ArrayList;
+import java.io.IOException;
 
-import info.guardianproject.netcipher.proxy.OrbotHelper;
-
-public class ChatViewActivity extends AppCompatActivity {
+public class ChatViewActivity extends AppCompatActivity implements OnMessageReceivedListener {
 
     private RecyclerView recyclerView;
     private ImageButton sendButton;
     private ImageButton backIcon;
     private EditText chatInputText;
-    private ArrayList<String> messageList;
+    private ArrayList<ChatMessage> messageList;
     private ChatViewAdapter adapter;
     private OrbotHelperClass orbotHelper;
-
     private EncryptionManager encryptionManager;
+    private TorMessageServer torMessageServer;
+    private boolean isServerRunning = false;
 
     private static final String TAG = "ChatViewActivity";
     private static final String ONION_ADDRESS = "http://4vf5q7np5dzsm4xcpr72cgtjzklbtpjyaqwvwfgzqjl5nwcbbsbnopqd.onion:5000/receive";
-
-
     private static final String PUBLIC_KEY_HEX = "d969c998c92834a05ed479e94c5fb915ca8ef1563ce99f52d1fee34729ac4232";
 
     @Override
@@ -46,132 +44,107 @@ public class ChatViewActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_chat_view);
 
-        initUIProps();
-        initChatList();
-
-        encryptionManager = new EncryptionManager(this);
-
-        orbotHelper = new OrbotHelperClass(this);
-        if (orbotHelper.isOrbotInstalled()) {
-            Log.d(TAG, "Orbot is installed");
-            orbotHelper.startOrbot();
-        } else {
-            Log.d(TAG, "Orbot is not installed");
-            orbotHelper.startOrbotManually();
-        }
+        initializeComponents();
+        setupRecyclerView();
+        setupClickListeners();
+     //   startServer();
+        orbotHelper.startOrbot();
+        addMockWelcomeMessage();
     }
 
-    private void initUIProps() {
+    private void addMockWelcomeMessage() {
+        new Handler().postDelayed(() -> {
+            adapter.addItem("Welcome to the chat!", true);
+            recyclerView.smoothScrollToPosition(adapter.getItemCount() - 1);
+        }, 1000);
+    }
+
+    private void initializeComponents() {
         recyclerView = findViewById(R.id.chat_recycle_view);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
         sendButton = findViewById(R.id.send_button);
-        chatInputText = findViewById(R.id.chat_text_input);
         backIcon = findViewById(R.id.back_icon_image);
-    }
+        chatInputText = findViewById(R.id.chat_text_input);
 
-    private void initChatList() {
         messageList = new ArrayList<>();
-        messageList.add("Welcome to Just Social, most secure communication");
-        adapter = new ChatViewAdapter(messageList, this);
-        recyclerView.setAdapter(adapter);
-        setClickListener();
+        orbotHelper = new OrbotHelperClass(this);
+        encryptionManager = new EncryptionManager(this);
+        encryptionManager.loadOrGenerateKeys();
+
+        torMessageServer = new TorMessageServer(this, encryptionManager);
+        torMessageServer.setOnMessageReceivedListener(this);
     }
 
-    private void setClickListener() {
-        sendButton.setOnClickListener(v -> getInputMessage());
+    private void setupRecyclerView() {
+        adapter = new ChatViewAdapter(messageList, this);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        recyclerView.setAdapter(adapter);
+    }
+
+    private void setupClickListeners() {
+        sendButton.setOnClickListener(v -> sendMessage());
         backIcon.setOnClickListener(v -> finish());
     }
 
-    private void getInputMessage() {
-        String text = chatInputText.getText().toString();
-
-        if (!text.isEmpty()) {
-            adapter.addItem(text);
-            chatInputText.getText().clear();
-            recyclerView.smoothScrollToPosition(messageList.size());
-            sendButton.setEnabled(false);
-
-            adapter.addItem("Typing...");
 
 
-            String x25519PublicKeyHex = PUBLIC_KEY_HEX;
-            Log.d(TAG, "Using provided X25519 public key: " + x25519PublicKeyHex);
+    private void sendMessage() {
+        String text = chatInputText.getText().toString().trim();
+        if (text.isEmpty()) return;
+        // Check if encryption keys are ready
+        if (encryptionManager.getStoredPublicKeyHex() == null) {
+            return;
+        }
 
-            // Encrypt the message
-            String encryptedMessage = encryptionManager.encryptMessage(text, x25519PublicKeyHex);
+        // Add message to UI
+        adapter.addItem(text, false);
+        chatInputText.getText().clear();
+        recyclerView.smoothScrollToPosition(adapter.getItemCount() - 1);
 
-            // Send the encrypted message
-            sendRequest(encryptedMessage);
+        // Encrypt and send message
+        new Thread(() -> {
+            try {
+                sendEncryptedOverTor(text);
+            } catch (Exception e) {
+                Log.e(TAG, "Error sending message", e);
+                runOnUiThread(() -> {
+                    adapter.removeLastItemIfExists();
+                    adapter.addItem("Failed to send message", false);
+                });
+            }
+        }).start();
+    }
 
-            new Handler().postDelayed(() -> {
-                adapter.removeItemFromList();
-                adapter.addItem("Message sent through Tor network!");
-                recyclerView.smoothScrollToPosition(messageList.size());
-                sendButton.setEnabled(true);
-            }, 1500);
+    private void sendEncryptedOverTor(String message) {
+        try {
+            String encryptedMessage = encryptionManager.encryptMessage(message, PUBLIC_KEY_HEX);
+            String senderPublicKey = encryptionManager.getPublicKeyHex();
+
+            JSONObject jsonPayload = new JSONObject();
+            jsonPayload.put("sender_public_key", senderPublicKey);
+            jsonPayload.put("encrypted_message", encryptedMessage);
+
+            String response = orbotHelper.connectToOnion(ONION_ADDRESS, jsonPayload.toString());
+            Log.d(TAG, "Message sent response: " + response);
+
+        } catch (JSONException e) {
+            Log.e(TAG, "Error creating JSON payload", e);
         }
     }
 
-    private void sendRequest(String encryptedMessage) {
-        Log.d(TAG, "Preparing to send message via Tor");
+    @Override
+    public void onMessageReceived(String message) {
+        runOnUiThread(() -> {
+            adapter.addItem(message, true);
+            recyclerView.smoothScrollToPosition(adapter.getItemCount() - 1);
+        });
+    }
 
-        OrbotHelperClass orbotHelperClass = new OrbotHelperClass(this);
-        OrbotHelper.get(this).init();
-
-        if (orbotHelperClass.isOrbotInstalled()) {
-            orbotHelperClass.startOrbot();
-
-            new Thread(() -> {
-                JSONObject jsonPayload = new JSONObject();
-                try {
-                    // Get sender public key
-                    String myPublicKeyHex = encryptionManager.getPublicKeyHex();
-
-                    jsonPayload.put("sender_public_key", myPublicKeyHex);
-                    jsonPayload.put("encrypted_message", encryptedMessage);
-                    jsonPayload.put("sender_id", "user_" + System.currentTimeMillis());
-
-                    Log.d(TAG, "Sending message to: " + ONION_ADDRESS);
-                    Log.d(TAG, "JSON Payload: " + jsonPayload.toString());
-
-                    String response = orbotHelperClass.connectToOnion(ONION_ADDRESS, jsonPayload.toString());
-
-                    if (response != null) {
-                        Log.d("OnionResponse", response);
-                        runOnUiThread(() -> {
-                            adapter.removeItemFromList();
-                            adapter.addItem("Response: " + response);
-                            recyclerView.smoothScrollToPosition(messageList.size());
-                        });
-                    } else {
-                        Log.e(TAG, "No response from onion service");
-                        runOnUiThread(() -> {
-                            adapter.removeItemFromList();
-                            adapter.addItem("No response from server");
-                            recyclerView.smoothScrollToPosition(messageList.size());
-                        });
-                    }
-                } catch (JSONException e) {
-                    Log.e(TAG, "JSON error: " + e);
-                    runOnUiThread(() -> {
-                        adapter.removeItemFromList();
-                        adapter.addItem("Error: " + e.getMessage());
-                        recyclerView.smoothScrollToPosition(messageList.size());
-                        sendButton.setEnabled(true);
-                    });
-                } catch (Exception e) {
-                    Log.e(TAG, "General error in sending thread: " + e);
-                    runOnUiThread(() -> {
-                        adapter.removeItemFromList();
-                        adapter.addItem("Error: " + e.getMessage());
-                        recyclerView.smoothScrollToPosition(messageList.size());
-                        sendButton.setEnabled(true);
-                    });
-                }
-            }).start();
-        } else {
-            Log.d(TAG, "Orbot not installed. Redirecting...");
-            orbotHelperClass.redirectToOrbotInstall();
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (torMessageServer != null && isServerRunning) {
+            torMessageServer.stop();
+            isServerRunning = false;
         }
     }
 }
