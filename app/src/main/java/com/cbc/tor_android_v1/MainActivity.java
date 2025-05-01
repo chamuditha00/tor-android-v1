@@ -223,14 +223,14 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "Onion URL: " + onionUrl);
             Log.d(TAG, "Public Key: " + publicKey);
         });
-          if (!onionUrl.isEmpty() && !publicKey.isEmpty()) {
-              try {
-                  torMessageServer.start();
-                  Log.d("started server", "Tor message server started");
-              } catch (IOException e) {
-                  throw new RuntimeException(e);
-              }
-          }
+//          if (!onionUrl.isEmpty() && !publicKey.isEmpty()) {
+//              try {
+//                  torMessageServer.start();
+//                  Log.d("started server", "Tor message server started");
+//              } catch (IOException e) {
+//                  throw new RuntimeException(e);
+//              }
+//          }
 
 //    private String extractPublicKey(File hsDir) {
 //        File pubKeyFile = new File(hsDir, "hs_ed25519_public_key");

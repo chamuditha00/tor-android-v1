@@ -21,6 +21,8 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.io.IOException;
 
+import info.guardianproject.netcipher.proxy.OrbotHelper;
+
 public class ChatViewActivity extends AppCompatActivity implements OnMessageReceivedListener {
 
     private RecyclerView recyclerView;
@@ -48,8 +50,30 @@ public class ChatViewActivity extends AppCompatActivity implements OnMessageRece
         setupRecyclerView();
         setupClickListeners();
      //   startServer();
-        orbotHelper.startOrbot();
+        torMessageServer = new TorMessageServer(this, encryptionManager);
+        torMessageServer.setOnMessageReceivedListener(message -> {
+            runOnUiThread(() -> {
+                adapter.addItem(message, true);
+                recyclerView.smoothScrollToPosition(adapter.getItemCount() - 1);
+                Log.d(TAG, "Message received in activity: " + message);
+            });
+        });
+
+        try {
+            torMessageServer.start();
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to start server", e);
+        }
         addMockWelcomeMessage();
+
+        orbotHelper = new OrbotHelperClass(this);
+        if (orbotHelper.isOrbotInstalled()) {
+            Log.d(TAG, "Orbot is installed");
+            orbotHelper.startOrbot();
+        } else {
+            Log.d(TAG, "Orbot is not installed");
+            orbotHelper.startOrbotManually();
+        }
     }
 
     private void addMockWelcomeMessage() {
@@ -88,6 +112,9 @@ public class ChatViewActivity extends AppCompatActivity implements OnMessageRece
 
 
     private void sendMessage() {
+
+        OrbotHelperClass orbotHelperClass = new OrbotHelperClass(this);
+        OrbotHelper.get(this).init();
         String text = chatInputText.getText().toString().trim();
         if (text.isEmpty()) return;
         // Check if encryption keys are ready
@@ -95,23 +122,26 @@ public class ChatViewActivity extends AppCompatActivity implements OnMessageRece
             return;
         }
 
+
         // Add message to UI
         adapter.addItem(text, false);
         chatInputText.getText().clear();
         recyclerView.smoothScrollToPosition(adapter.getItemCount() - 1);
-
-        // Encrypt and send message
-        new Thread(() -> {
-            try {
-                sendEncryptedOverTor(text);
-            } catch (Exception e) {
-                Log.e(TAG, "Error sending message", e);
-                runOnUiThread(() -> {
-                    adapter.removeLastItemIfExists();
-                    adapter.addItem("Failed to send message", false);
-                });
-            }
-        }).start();
+if(orbotHelperClass.isOrbotInstalled()) {
+    orbotHelper.startOrbot();
+    // Encrypt and send message
+    new Thread(() -> {
+        try {
+            sendEncryptedOverTor(text);
+        } catch (Exception e) {
+            Log.e(TAG, "Error sending message", e);
+            runOnUiThread(() -> {
+                adapter.removeLastItemIfExists();
+                adapter.addItem("Failed to send message", false);
+            });
+        }
+    }).start();
+}
     }
 
     private void sendEncryptedOverTor(String message) {
@@ -134,6 +164,7 @@ public class ChatViewActivity extends AppCompatActivity implements OnMessageRece
     @Override
     public void onMessageReceived(String message) {
         runOnUiThread(() -> {
+            Log.d(TAG, "Message received: " + message);
             adapter.addItem(message, true);
             recyclerView.smoothScrollToPosition(adapter.getItemCount() - 1);
         });
